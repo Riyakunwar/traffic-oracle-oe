@@ -1,221 +1,242 @@
-# OpenEnv Traffic Lights: RL Environment for Congestion Optimization
+# redgrid — Traffic Signal Optimization (OpenEnv)
 
-This project provides a blueprint for creating an **OpenEnv-compatible reinforcement learning environment** that simulates traffic lights and trains an agent to reduce road congestion.
+An **OpenEnv-compatible environment** simulating adaptive traffic signal control on a city road grid. An RL agent controls traffic lights at every intersection to minimize vehicle wait times during peak hours.
 
-The goal is to learn a traffic signal policy that improves:
-- average vehicle waiting time
-- queue lengths per lane
-- throughput at intersections
+Vehicles submit itineraries (origin, destination, departure time, vehicle category). Roads have limited capacity and intersections switch between two signal phases (NS_GREEN / EW_GREEN) with enforced minimum green and yellow transition periods.
 
 ---
 
-## 1) Problem Statement
-
-Traditional traffic light schedules are fixed (e.g., 30s green / 30s red) and do not adapt to changing traffic demand.
-
-In this environment, an RL agent observes intersection traffic state and decides how to control traffic lights to minimize congestion over time.
-
----
-
-## 2) Environment Design
-
-### Core Concepts
-
-- **Intersection**: one or more signalized intersections (start with one).
-- **Approaches/Lanes**: incoming lanes such as North, South, East, West.
-- **Signal Phases**: allowed movement groups (e.g., NS green, EW green, all red transition).
-- **Vehicles**: entities with arrival time, lane, and movement intent.
-- **Time Step**: discrete simulation tick (e.g., 1 second).
-
-### Recommended First Version (MVP)
-
-Start simple:
-- Single intersection
-- 4 incoming approaches
-- 2 signal phases: `NS_GREEN`, `EW_GREEN`
-- Stochastic vehicle arrivals (Poisson-like process)
-- Fixed yellow/all-red transition penalty period
-
----
-
-## 3) Observation Space
-
-At each step, the agent should receive a compact state representation such as:
-
-- queue length per incoming lane
-- mean waiting time per lane
-- current active phase
-- time elapsed in current phase
-- optional: arrival rate estimate
-
-Example state vector:
-```text
-[q_n, q_s, q_e, q_w, wait_n, wait_s, wait_e, wait_w, phase_id, phase_time]
-```
-
-Keep observations normalized for stable training.
-
----
-
-## 4) Action Space
-
-Common action choices:
-
-1. **Discrete phase select**
-   - `0 = keep current phase`
-   - `1 = switch to NS_GREEN`
-   - `2 = switch to EW_GREEN`
-
-2. **Binary switch**
-   - `0 = hold`
-   - `1 = toggle phase`
-
-For safety and realism, enforce:
-- minimum green duration
-- yellow/all-red transition before switching
-
----
-
-## 5) Reward Function
-
-A good reward aligns with congestion reduction:
-
-```text
-reward_t = - (alpha * total_queue_length + beta * total_waiting_time) + gamma * vehicles_departed
-```
-
-Typical behavior:
-- penalize long queues and waiting time
-- reward throughput (vehicles that clear the intersection)
-- optionally penalize frequent phase switching
-
-Example:
-```text
-reward_t = -0.5 * queue_sum - 0.3 * wait_sum + 1.0 * passed - 0.1 * switched
-```
-
-Tune coefficients (`alpha`, `beta`, `gamma`) experimentally.
-
----
-
-## 6) Episode Definition
-
-An episode can represent a fixed horizon, for example:
-- 1 simulated hour
-- 3600 steps if 1 step = 1 second
-
-Reset should:
-- clear all vehicles
-- reset phase and timer
-- reseed or regenerate traffic demand pattern
-
-Use multiple demand profiles (light, medium, peak) to avoid overfitting.
-
----
-
-## 7) OpenEnv Interface (Conceptual)
-
-Your environment should expose standard RL methods:
-
-- `reset(seed=None) -> obs, info`
-- `step(action) -> obs, reward, terminated, truncated, info`
-- `render()`
-- `close()`
-
-`info` may include useful metrics:
-- `avg_wait`
-- `queue_sum`
-- `throughput`
-- `switch_count`
-
----
-
-## 8) Suggested Project Structure
-
-```text
-rl-openenv-ai/
-├── README.md
-├── openenv_traffic/
-│   ├── __init__.py
-│   ├── env.py                # environment class
-│   ├── traffic_model.py      # vehicle arrival + movement logic
-│   ├── signal_controller.py  # phase/switch constraints
-│   └── metrics.py            # congestion metrics
-├── train.py                  # RL training entry point
-├── evaluate.py               # policy evaluation script
-└── requirements.txt
-```
-
----
-
-## 9) Training Pipeline
-
-1. Build and validate environment dynamics.
-2. Run a random policy baseline.
-3. Train with a baseline RL algorithm (e.g., PPO, DQN).
-4. Compare against fixed-time and actuated heuristic controls.
-5. Evaluate on unseen traffic demand profiles.
-
-Track:
-- mean reward
-- average delay per vehicle
-- max and mean queue length
-- throughput (vehicles/hour)
-
----
-
-## 10) Baselines to Compare Against
-
-To prove RL value, compare with:
-
-- **Fixed-time control**: static cycle durations
-- **Vehicle-actuated heuristic**: extend green if queue threshold exceeded
-- **Random switching**: sanity check lower bound
-
-RL should outperform at least fixed-time under variable demand.
-
----
-
-## 11) Evaluation Checklist
-
-- [ ] Deterministic seed reproducibility
-- [ ] No invalid phase transitions
-- [ ] Reward does not explode/vanish
-- [ ] Training curve improves over random baseline
-- [ ] RL policy generalizes across traffic profiles
-
----
-
-## 12) Minimal Pseudocode
+## Action Space
 
 ```python
-obs, info = env.reset(seed=42)
-done = False
-while not done:
-    action = agent.predict(obs)
-    obs, reward, terminated, truncated, info = env.step(action)
-    done = terminated or truncated
+TrafficAction(phases=[0, 1, 0, ...])  # one int per intersection: 0=NS_GREEN, 1=EW_GREEN
+```
+
+One phase choice per intersection (sorted by node ID). Signal changes enforce a 5-second minimum green and a 3-second yellow transition.
+
+## Observation Space
+
+`TrafficObservation` contains:
+
+| Field | Type | Description |
+|---|---|---|
+| `current_time` | int | Simulation second (0–7199) |
+| `task` | str | Active task name |
+| `intersections` | list | Per-intersection observations (see below) |
+| `total_vehicles_active` | int | Vehicles currently in the network |
+| `total_vehicles_departed` | int | Vehicles that reached their destination |
+| `total_vehicles_waiting` | int | Vehicles waiting at signals this step |
+| `total_cumulative_wait` | float | Sum of all vehicle wait-seconds so far |
+
+Each `IntersectionObs`:
+
+| Field | Description |
+|---|---|
+| `node_id`, `current_phase`, `phase_timer`, `in_yellow` | Signal state |
+| `queue_north/south/east/west` | Vehicles queued per approach |
+| `occupancy_north/south/east/west` | Load/capacity ratio per approach |
+
+## Vehicle Categories
+
+| Category | Road space |
+|---|---|
+| 2-wheeler | 0.5 car-equivalents |
+| 3-wheeler | 0.75 |
+| Small car | 1.0 |
+| Large vehicle | 2.0 |
+
+## Tasks
+
+| | Easy | Medium | Hard |
+|---|---|---|---|
+| Grid | 4×4 (16 intersections) | 7×7 (49 intersections) | 10×10 (100 intersections) |
+| Road capacity | 25 car-equiv | 18 car-equiv | 12 car-equiv |
+| Vehicle types | 2-wheeler, small car | All 4 | All 4, heavy on large |
+| Traffic volume | ~3,600 vehicles/2h | ~14,400 vehicles/2h | ~43,000 vehicles/2h |
+| Demand pattern | Uniform | Moderate | Time-varying + commuter corridors |
+
+Task is selected via `reset(task="easy")`. Episode length: 7,200 steps (2 simulated hours).
+
+## Reward
+
+**Per-step (dense):**
+```
+reward = -1.0 * wait_penalty + 0.5 * departed_bonus - 0.05 * switch_penalty
+```
+
+**Episodic grader (0.0–1.0):** Linearly interpolated between calibrated worst/best wait bounds. Returned in `metadata["grader_score"]` on the final step (`done=True`).
+
+## Baseline Scores (Fixed-Time 30s Cycle, seed=42)
+
+| Task | Grader Score | Total Wait (s) |
+|---|---|---|
+| Easy | 0.037 | 43,636 |
+| Medium | 0.014 | 322,015 |
+| Hard | 0.027 | 1,616,050 |
+
+An RL agent should significantly outperform these.
+
+---
+
+## Setup
+
+**Prerequisites:** Python 3.10+, [`uv`](https://github.com/astral-sh/uv)
+
+```bash
+git clone <repo-url>
+cd rl-openenv-ai/redgrid
+
+# Install dependencies
+uv sync
+
+# Run tests
+python -m pytest tests/ -v
+
+# Run the fixed-time baseline (all 3 tasks)
+python -m redgrid.baseline.run_baseline
 ```
 
 ---
 
-## 13) Future Extensions
+## Running the Server Locally
 
-- Multi-intersection coordination (grid network)
-- Priority lanes (bus/emergency vehicles)
-- Pedestrian phase integration
-- Weather/event-based demand shifts
-- Offline imitation pretraining from heuristic controller logs
+```bash
+cd rl-openenv-ai/redgrid
+
+# Start the FastAPI server
+uvicorn server.app:app --host 0.0.0.0 --port 8000 --reload
+
+# Or run directly
+python -m server.app
+```
+
+The server exposes:
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/reset` | POST | Start a new episode |
+| `/step` | POST | Execute an action |
+| `/state` | GET | Current episode metadata |
+| `/schema` | GET | Action/observation JSON schemas |
+| `/ws` | WebSocket | Persistent session (low-latency) |
+| `/health` | GET | Health check |
 
 ---
 
-## 14) Quick Start Notes
+## Client Usage
 
-If you are implementing this from scratch:
-1. Start with one intersection and deterministic arrivals.
-2. Verify reward behavior and phase constraints.
-3. Add stochastic traffic.
-4. Train PPO as a first benchmark.
-5. Scale complexity only after stable learning.
+```python
+from redgrid import TrafficEnv, TrafficAction
 
-This staged approach avoids debugging simulation complexity and RL instability at the same time.
+with TrafficEnv(base_url="http://localhost:8000") as env:
+    result = env.reset(task="easy", seed=42)
+
+    for step in range(7200):
+        obs = result.observation
+        # Build action: one phase per intersection
+        phases = [0 if obs.intersections[i].queue_north + obs.intersections[i].queue_south
+                     >= obs.intersections[i].queue_east + obs.intersections[i].queue_west
+                     else 1
+                  for i in range(len(obs.intersections))]
+        result = env.step(TrafficAction(phases=phases))
+
+    print(f"Score: {result.observation.metadata['grader_score']:.3f}")
+```
+
+---
+
+## Docker
+
+```bash
+cd rl-openenv-ai/redgrid
+
+# Build
+docker build -t redgrid-env -f server/Dockerfile .
+
+# Run
+docker run -p 8000:8000 redgrid-env
+
+# Test it
+curl http://localhost:8000/health
+curl -X POST http://localhost:8000/reset -H "Content-Type: application/json" \
+     -d '{"task": "easy", "seed": 42}'
+```
+
+---
+
+## Deploy to Hugging Face Spaces
+
+### Prerequisites
+
+```bash
+pip install openenv
+huggingface-cli login   # requires HF account with write access
+```
+
+### One-command deploy
+
+```bash
+cd rl-openenv-ai/redgrid
+openenv push --repo-id <your-hf-username>/redgrid
+```
+
+This will:
+1. Package your environment code
+2. Create (or update) a Hugging Face Space at `https://huggingface.co/spaces/<username>/redgrid`
+3. Build the Docker container on HF infrastructure
+4. Expose the live OpenEnv API endpoints
+
+### Install the deployed client
+
+Once deployed, anyone can install and use your environment:
+
+```bash
+pip install git+https://huggingface.co/spaces/<username>/redgrid
+```
+
+```python
+from redgrid import TrafficEnv
+env = TrafficEnv(base_url="https://<username>-redgrid.hf.space")
+```
+
+### Scaling concurrent sessions
+
+In your Space settings → Variables:
+
+| Variable | Value | Effect |
+|---|---|---|
+| `MAX_CONCURRENT_ENVS` | `100` | Environments per worker |
+| Workers (Space settings) | `4` | Parallel workers |
+
+Free tier supports ~128 concurrent sessions. Upgrade to CPU Upgrade tier for higher throughput.
+
+---
+
+## Project Structure
+
+```
+redgrid/
+├── __init__.py              # Exports: TrafficEnv, TrafficAction, TrafficObservation
+├── models.py                # Pydantic Action/Observation types
+├── network.py               # Road network graph + grid factory + BFS routing
+├── vehicles.py              # VehicleCategory, Itinerary, Vehicle
+├── simulation.py            # TrafficSimulator — discrete-time tick engine
+├── tasks.py                 # Easy/medium/hard TaskConfig + itinerary generation
+├── graders.py               # Episodic 0.0–1.0 scoring
+├── client.py                # TrafficEnv(EnvClient) HTTP/WebSocket client
+├── openenv.yaml             # OpenEnv manifest
+├── pyproject.toml           # Package metadata + dependencies
+├── server/
+│   ├── traffic_environment.py  # Environment subclass (reset/step/state)
+│   ├── app.py                  # FastAPI app via create_app()
+│   ├── Dockerfile              # Multi-stage build from openenv-base
+│   └── requirements.txt        # Server dependencies
+├── baseline/
+│   ├── fixed_time_agent.py     # Fixed-cycle 30s baseline agent
+│   └── run_baseline.py         # Reproducible scoring across all tasks
+└── tests/
+    ├── test_network.py
+    ├── test_vehicles.py
+    ├── test_simulation.py
+    └── test_environment.py
+```
