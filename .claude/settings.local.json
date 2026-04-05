@@ -11,7 +11,24 @@
       "Bash(find redgrid:*)",
       "Bash(sed -i 's/openenv_traffic/redgrid/g' redgrid/openenv.yaml)",
       "Bash(python -m pytest redgrid/tests/ -v)",
-      "Bash(python -m pytest redgrid/tests/ -q)"
+      "Bash(python -m pytest redgrid/tests/ -q)",
+      "Bash(rm -rf redgrid/.venv)",
+      "Bash(uv sync:*)",
+      "Bash(.venv/Scripts/python -c \"from server.app import app; print\\('Server app loaded OK'\\)\")",
+      "Bash(.venv/Scripts/python -m uvicorn server.app:app --host 127.0.0.1 --port 8765)",
+      "Bash(curl -s http://127.0.0.1:8765/)",
+      "Bash(.venv/Scripts/python -m uvicorn server.app:app --host 127.0.0.1 --port 8766)",
+      "Bash(.venv/Scripts/python:*)",
+      "Bash(redgrid/.venv/Scripts/python -m uvicorn redgrid.server.app:app --host 127.0.0.1 --port 8766)",
+      "Bash(curl -s http://127.0.0.1:8766/)",
+      "Bash(curl -s http://127.0.0.1:8766/openapi.json)",
+      "Bash(python -m json.tool)",
+      "Bash(uv run:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" https://amitex007-redgrid.hf.space/health)",
+      "Bash(curl -s -X POST https://amitex007-redgrid.hf.space/reset -H 'Content-Type: application/json' -d '{\"task\":\"easy\",\"seed\":42}')",
+      "Bash(curl -s -X POST https://amitex007-redgrid.hf.space/step -H 'Content-Type: application/json' -d '{\"action\":{\"phases\":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}}')",
+      "Bash(curl -s https://amitex007-redgrid.hf.space/state)",
+      "Bash(find .venv/lib/site-packages/openenv* -name \"*.py\" -path \"*/cli/*\")"
     ]
   }
 }
