@@ -1,0 +1,2 @@
+[console_scripts]
+redgrid-server = server.app:main

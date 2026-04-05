@@ -10,7 +10,7 @@ except Exception as e:
 try:
     from ..models import TrafficAction, TrafficObservation
     from .traffic_environment import TrafficEnvironment
-except ModuleNotFoundError:
+except (ImportError, ModuleNotFoundError):
     from models import TrafficAction, TrafficObservation
     from server.traffic_environment import TrafficEnvironment
 

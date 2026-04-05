@@ -9,11 +9,17 @@ dependencies = [
     "wheel",
 ]
 
+[project.scripts]
+redgrid-server = "server.app:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
 ]
 
+[tool.setuptools.packages.find]
+include = ["server*", "baseline*", "tests*"]
+
 [build-system]
-requires = ["setuptools>=64", "wheel"]
-build-backend = "setuptools.backends._legacy:_Backend"
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"

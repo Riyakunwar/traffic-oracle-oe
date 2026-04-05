@@ -5,8 +5,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
-from .network import RoadNetwork, SignalPhase
-from .vehicles import Itinerary, Vehicle, VEHICLE_SIZE
+try:
+    from .network import RoadNetwork, SignalPhase
+    from .vehicles import Itinerary, Vehicle, VEHICLE_SIZE
+except ImportError:
+    from network import RoadNetwork, SignalPhase
+    from vehicles import Itinerary, Vehicle, VEHICLE_SIZE
 
 
 @dataclass

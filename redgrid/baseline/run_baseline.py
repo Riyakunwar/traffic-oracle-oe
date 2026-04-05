@@ -8,10 +8,16 @@ from __future__ import annotations
 
 import time
 
-from ..server.traffic_environment import TrafficEnvironment
-from ..models import TrafficAction
-from ..tasks import TASKS
-from .fixed_time_agent import FixedTimeAgent
+try:
+    from ..server.traffic_environment import TrafficEnvironment
+    from ..models import TrafficAction
+    from ..tasks import TASKS
+    from .fixed_time_agent import FixedTimeAgent
+except ImportError:
+    from server.traffic_environment import TrafficEnvironment
+    from models import TrafficAction
+    from tasks import TASKS
+    from baseline.fixed_time_agent import FixedTimeAgent
 
 
 def run_task(task_name: str, seed: int = 42) -> dict:

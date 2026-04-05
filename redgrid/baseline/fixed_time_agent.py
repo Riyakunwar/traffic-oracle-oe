@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from ..models import TrafficAction, TrafficObservation
+try:
+    from ..models import TrafficAction, TrafficObservation
+except ImportError:
+    from models import TrafficAction, TrafficObservation
 
 
 class FixedTimeAgent:
