@@ -1,7 +1,7 @@
 """Tests for the road network graph."""
 
 import pytest
-from redgrid.network import RoadNetwork, SignalPhase, Direction
+from network import RoadNetwork, SignalPhase, Direction
 
 
 class TestGridCreation:

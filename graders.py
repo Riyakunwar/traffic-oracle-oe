@@ -4,10 +4,7 @@ from __future__ import annotations
 
 from typing import Dict
 
-try:
-    from .tasks import TaskConfig, TASKS
-except ImportError:
-    from tasks import TaskConfig, TASKS
+from tasks import TaskConfig, TASKS
 
 
 # Calibrated bounds per task (total cumulative wait in seconds).

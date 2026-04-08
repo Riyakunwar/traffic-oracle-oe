@@ -1,6 +1,6 @@
 """Tests for vehicle types and itineraries."""
 
-from redgrid.vehicles import (
+from vehicles import (
     Vehicle,
     Itinerary,
     VehicleCategory,

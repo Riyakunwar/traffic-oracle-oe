@@ -3,11 +3,11 @@
 import pytest
 
 # These tests import the environment directly (no openenv server needed)
-from redgrid.network import RoadNetwork
-from redgrid.vehicles import Itinerary, VehicleCategory
-from redgrid.simulation import TrafficSimulator
-from redgrid.tasks import TASKS, generate_itineraries
-from redgrid.graders import compute_score
+from network import RoadNetwork
+from vehicles import Itinerary, VehicleCategory
+from simulation import TrafficSimulator
+from tasks import TASKS, generate_itineraries
+from graders import compute_score
 
 
 class TestTaskConfigs:

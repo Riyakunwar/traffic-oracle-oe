@@ -28,7 +28,12 @@
       "Bash(curl -s -X POST https://amitex007-redgrid.hf.space/reset -H 'Content-Type: application/json' -d '{\"task\":\"easy\",\"seed\":42}')",
       "Bash(curl -s -X POST https://amitex007-redgrid.hf.space/step -H 'Content-Type: application/json' -d '{\"action\":{\"phases\":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}}')",
       "Bash(curl -s https://amitex007-redgrid.hf.space/state)",
-      "Bash(find .venv/lib/site-packages/openenv* -name \"*.py\" -path \"*/cli/*\")"
+      "Bash(find .venv/lib/site-packages/openenv* -name \"*.py\" -path \"*/cli/*\")",
+      "Bash(python3:*)",
+      "Bash(git mv:*)",
+      "Bash(git rm:*)",
+      "Bash(python:*)",
+      "Bash(docker build:*)"
     ]
   }
 }

@@ -1,5 +1,5 @@
 """
-Inference Script for RedGrid Traffic Signal Optimization
+Inference Script for Traffic Oracle — Traffic Signal Optimization
 ===================================
 MANDATORY
 - Before submitting, ensure the following variables are defined in your environment configuration:
@@ -13,9 +13,9 @@ MANDATORY
 STDOUT FORMAT
 - The script emits exactly three line types to stdout:
 
-    [START] task=<task_name> env=redgrid model=<model_name>
+    [START] task=<task_name> env=traffic-oracle model=<model_name>
     [STEP]  step=<n> action=<action_str> reward=<0.00> done=<true|false> error=<msg|null>
-    [END]   success=<true|false> steps=<n> score=<score> rewards=<r1,r2,...,rn>
+    [END]   success=<true|false> steps=<n> rewards=<r1,r2,...,rn>
 
 Usage:
     API_BASE_URL=... MODEL_NAME=... HF_TOKEN=... python inference.py
@@ -36,13 +36,16 @@ from models import TrafficAction
 from tasks import TASKS
 
 # ---------------------------------------------------------------------------
-# Configuration
+# Configuration (environment variables per hackathon guidelines)
 # ---------------------------------------------------------------------------
-API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
-API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
-MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-72B-Instruct")
+HF_TOKEN = os.getenv("HF_TOKEN")
 
-BENCHMARK = "redgrid"
+if HF_TOKEN is None:
+    raise ValueError("HF_TOKEN environment variable is required")
+
+BENCHMARK = "traffic-oracle"
 TASK_NAMES = ["easy", "medium", "hard"]
 SEED = 42
 EPISODE_STEPS = 7200
@@ -83,10 +86,10 @@ def log_step(step: int, action: str, reward: float, done: bool, error: Optional[
     )
 
 
-def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
+def log_end(success: bool, steps: int, rewards: List[float]) -> None:
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     print(
-        f"[END] success={str(success).lower()} steps={steps} score={score:.2f} rewards={rewards_str}",
+        f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}",
         flush=True,
     )
 
@@ -180,7 +183,6 @@ def run_task(task: str, client: OpenAI) -> None:
     n = config.num_intersections
     rewards: List[float] = []
     steps_taken = 0
-    score = 0.0
     success = False
     last_error: Optional[str] = None
 
@@ -221,10 +223,9 @@ def run_task(task: str, client: OpenAI) -> None:
             if done:
                 break
 
-        # Extract grader score
+        # Determine success from grader score
         metadata = obs.metadata if obs.metadata else {}
         score = metadata.get("grader_score", 0.0)
-        score = min(max(score, 0.0), 1.0)
         success = score > 0.0
 
     except Exception as exc:
@@ -238,7 +239,7 @@ def run_task(task: str, client: OpenAI) -> None:
         )
 
     finally:
-        log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
+        log_end(success=success, steps=steps_taken, rewards=rewards)
 
 
 # ---------------------------------------------------------------------------
@@ -246,7 +247,7 @@ def run_task(task: str, client: OpenAI) -> None:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY or "unused")
+    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN)
 
     for task in TASK_NAMES:
         run_task(task, client)

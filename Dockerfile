@@ -7,9 +7,6 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends git && \
     rm -rf /var/lib/apt/lists/*
 
-ARG BUILD_MODE=in-repo
-ARG ENV_NAME=openenv_traffic
-
 COPY . /app/env
 
 WORKDIR /app/env
