@@ -1,10 +1,12 @@
-"""Episodic graders that produce 0.0–1.0 scores based on total wait time."""
+"""Episodic graders that produce strictly-bounded (0, 1) scores."""
 
 from __future__ import annotations
 
 from typing import Dict
 
 from tasks import TaskConfig, TASKS
+
+_SCORE_EPSILON = 1e-6
 
 
 # Calibrated bounds per task (total cumulative wait in seconds).
@@ -19,10 +21,10 @@ GRADER_BOUNDS: Dict[str, Dict[str, float]] = {
 
 
 def compute_score(task_name: str, total_cumulative_wait: float) -> float:
-    """Compute a 0.0–1.0 score for an episode.
+    """Compute a strictly-bounded (0, 1) score for an episode.
 
     Score is linearly interpolated between worst and best wait bounds,
-    clamped to [0.0, 1.0].
+    then clamped to the open interval (_SCORE_EPSILON, 1.0 - _SCORE_EPSILON).
 
     A score of 1.0 means the agent achieved the best known wait time.
     A score of 0.0 means the agent performed as badly as random switching.
@@ -32,17 +34,17 @@ def compute_score(task_name: str, total_cumulative_wait: float) -> float:
         total_cumulative_wait: Sum of all vehicle wait-seconds over the episode.
 
     Returns:
-        Score between 0.0 and 1.0.
+        Score strictly between 0.0 and 1.0.
     """
     bounds = GRADER_BOUNDS.get(task_name)
     if bounds is None:
-        return 0.0
+        return _SCORE_EPSILON
 
     worst = bounds["worst_wait"]
     best = bounds["best_wait"]
 
     if worst <= best:
-        return 1.0 if total_cumulative_wait <= best else 0.0
+        return 1.0 - _SCORE_EPSILON if total_cumulative_wait <= best else _SCORE_EPSILON
 
     score = (worst - total_cumulative_wait) / (worst - best)
-    return max(0.0, min(1.0, score))
+    return max(_SCORE_EPSILON, min(1.0 - _SCORE_EPSILON, score))

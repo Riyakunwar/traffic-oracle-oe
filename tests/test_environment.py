@@ -66,11 +66,13 @@ class TestItineraryGeneration:
 class TestGrader:
     def test_score_at_worst(self):
         score = compute_score("easy", 50_000.0)
-        assert score == pytest.approx(0.0, abs=0.01)
+        assert 0.0 < score < 1.0
+        assert score < 0.01
 
     def test_score_at_best(self):
         score = compute_score("easy", 5_000.0)
-        assert score == pytest.approx(1.0, abs=0.01)
+        assert 0.0 < score < 1.0
+        assert score > 0.99
 
     def test_score_in_between(self):
         score = compute_score("easy", 27_500.0)
@@ -78,15 +80,18 @@ class TestGrader:
 
     def test_score_below_best_clamped(self):
         score = compute_score("easy", 0.0)
-        assert score == 1.0
+        assert 0.0 < score < 1.0
+        assert score > 0.99
 
     def test_score_above_worst_clamped(self):
         score = compute_score("easy", 100_000.0)
-        assert score == 0.0
+        assert 0.0 < score < 1.0
+        assert score < 0.01
 
     def test_unknown_task(self):
         score = compute_score("nonexistent", 1000.0)
-        assert score == 0.0
+        assert 0.0 < score < 1.0
+        assert score < 0.01
 
 
 class TestSimulationIntegration:
