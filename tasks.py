@@ -7,10 +7,7 @@ import random
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple
 
-try:
-    from .vehicles import Itinerary, VehicleCategory
-except ImportError:
-    from vehicles import Itinerary, VehicleCategory
+from vehicles import Itinerary, VehicleCategory
 
 
 @dataclass

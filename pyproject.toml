@@ -1,5 +1,5 @@
 [project]
-name = "redgrid"
+name = "traffic-oracle"
 version = "0.1.0"
 description = "OpenEnv environment for traffic signal optimization via RL"
 requires-python = ">=3.10"

@@ -7,18 +7,11 @@ from uuid import uuid4
 from openenv.core.env_server.interfaces import Environment
 from openenv.core.env_server.types import State
 
-try:
-    from ..models import TrafficAction, TrafficObservation, IntersectionObs
-    from ..network import RoadNetwork
-    from ..simulation import TrafficSimulator
-    from ..tasks import TASKS, TaskConfig, generate_itineraries
-    from ..graders import compute_score
-except ImportError:
-    from models import TrafficAction, TrafficObservation, IntersectionObs
-    from network import RoadNetwork
-    from simulation import TrafficSimulator
-    from tasks import TASKS, TaskConfig, generate_itineraries
-    from graders import compute_score
+from models import TrafficAction, TrafficObservation, IntersectionObs
+from network import RoadNetwork
+from simulation import TrafficSimulator
+from tasks import TASKS, TaskConfig, generate_itineraries
+from graders import compute_score
 
 
 class TrafficEnvironment(Environment):

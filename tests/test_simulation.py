@@ -1,9 +1,9 @@
 """Tests for the traffic simulation engine."""
 
 import pytest
-from redgrid.network import RoadNetwork, SignalPhase
-from redgrid.vehicles import Itinerary, VehicleCategory
-from redgrid.simulation import TrafficSimulator
+from network import RoadNetwork, SignalPhase
+from vehicles import Itinerary, VehicleCategory
+from simulation import TrafficSimulator
 
 
 class TestSpawning:

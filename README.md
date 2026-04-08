@@ -1,4 +1,4 @@
-# redgrid — Traffic Signal Optimization (OpenEnv)
+# traffic-oracle — Traffic Signal Optimization (OpenEnv)
 
 An **OpenEnv-compatible environment** simulating adaptive traffic signal control on a city road grid. An RL agent controls traffic lights at every intersection to minimize vehicle wait times during peak hours.
 
@@ -49,7 +49,7 @@ Each `IntersectionObs`:
 
 | | Easy | Medium | Hard |
 |---|---|---|---|
-| Grid | 4×4 (16 intersections) | 7×7 (49 intersections) | 10×10 (100 intersections) |
+| Grid | 4x4 (16 intersections) | 7x7 (49 intersections) | 10x10 (100 intersections) |
 | Road capacity | 25 car-equiv | 18 car-equiv | 12 car-equiv |
 | Vehicle types | 2-wheeler, small car | All 4 | All 4, heavy on large |
 | Traffic volume | ~3,600 vehicles/2h | ~14,400 vehicles/2h | ~43,000 vehicles/2h |
@@ -84,7 +84,7 @@ An RL agent should significantly outperform these.
 
 ```bash
 git clone <repo-url>
-cd rl-openenv-ai/redgrid
+cd rl-openenv-ai
 
 # Install dependencies
 uv sync
@@ -93,7 +93,7 @@ uv sync
 python -m pytest tests/ -v
 
 # Run the fixed-time baseline (all 3 tasks)
-python -m redgrid.baseline.run_baseline
+python -m baseline.run_baseline
 ```
 
 ---
@@ -101,8 +101,6 @@ python -m redgrid.baseline.run_baseline
 ## Running the Server Locally
 
 ```bash
-cd rl-openenv-ai/redgrid
-
 # Start the FastAPI server
 uvicorn server.app:app --host 0.0.0.0 --port 8000 --reload
 
@@ -123,38 +121,14 @@ The server exposes:
 
 ---
 
-## Client Usage
-
-```python
-from redgrid import TrafficEnv, TrafficAction
-
-with TrafficEnv(base_url="http://localhost:8000") as env:
-    result = env.reset(task="easy", seed=42)
-
-    for step in range(7200):
-        obs = result.observation
-        # Build action: one phase per intersection
-        phases = [0 if obs.intersections[i].queue_north + obs.intersections[i].queue_south
-                     >= obs.intersections[i].queue_east + obs.intersections[i].queue_west
-                     else 1
-                  for i in range(len(obs.intersections))]
-        result = env.step(TrafficAction(phases=phases))
-
-    print(f"Score: {result.observation.metadata['grader_score']:.3f}")
-```
-
----
-
 ## Docker
 
 ```bash
-cd rl-openenv-ai/redgrid
-
-# Build
-docker build -t redgrid-env -f server/Dockerfile .
+# Build (from project root)
+docker build -t traffic-oracle .
 
 # Run
-docker run -p 8000:8000 redgrid-env
+docker run -p 8000:8000 traffic-oracle
 
 # Test it
 curl http://localhost:8000/health
@@ -164,59 +138,40 @@ curl -X POST http://localhost:8000/reset -H "Content-Type: application/json" \
 
 ---
 
-## Deploy to Hugging Face Spaces
+## Running Inference
 
-### Prerequisites
+```bash
+# Set required environment variables
+export HF_TOKEN="your-huggingface-token"
+export API_BASE_URL="https://router.huggingface.co/v1"   # optional, has default
+export MODEL_NAME="Qwen/Qwen2.5-72B-Instruct"            # optional, has default
+
+# Run inference across all tasks
+python inference.py
+```
+
+---
+
+## Deploy to Hugging Face Spaces
 
 ```bash
 pip install openenv
-huggingface-cli login   # requires HF account with write access
+huggingface-cli login
+
+# One-command deploy
+openenv push --repo-id <your-hf-username>/traffic-oracle
 ```
-
-### One-command deploy
-
-```bash
-cd rl-openenv-ai/redgrid
-openenv push --repo-id <your-hf-username>/redgrid
-```
-
-This will:
-1. Package your environment code
-2. Create (or update) a Hugging Face Space at `https://huggingface.co/spaces/<username>/redgrid`
-3. Build the Docker container on HF infrastructure
-4. Expose the live OpenEnv API endpoints
-
-### Install the deployed client
-
-Once deployed, anyone can install and use your environment:
-
-```bash
-pip install git+https://huggingface.co/spaces/<username>/redgrid
-```
-
-```python
-from redgrid import TrafficEnv
-env = TrafficEnv(base_url="https://<username>-redgrid.hf.space")
-```
-
-### Scaling concurrent sessions
-
-In your Space settings → Variables:
-
-| Variable | Value | Effect |
-|---|---|---|
-| `MAX_CONCURRENT_ENVS` | `100` | Environments per worker |
-| Workers (Space settings) | `4` | Parallel workers |
-
-Free tier supports ~128 concurrent sessions. Upgrade to CPU Upgrade tier for higher throughput.
 
 ---
 
 ## Project Structure
 
 ```
-redgrid/
-├── __init__.py              # Exports: TrafficEnv, TrafficAction, TrafficObservation
+traffic-oracle/
+├── inference.py             # LLM inference script (root, required by guidelines)
+├── Dockerfile               # Docker build from project root
+├── openenv.yaml             # OpenEnv manifest
+├── pyproject.toml           # Package metadata + dependencies
 ├── models.py                # Pydantic Action/Observation types
 ├── network.py               # Road network graph + grid factory + BFS routing
 ├── vehicles.py              # VehicleCategory, Itinerary, Vehicle
@@ -224,16 +179,12 @@ redgrid/
 ├── tasks.py                 # Easy/medium/hard TaskConfig + itinerary generation
 ├── graders.py               # Episodic 0.0–1.0 scoring
 ├── client.py                # TrafficEnv(EnvClient) HTTP/WebSocket client
-├── openenv.yaml             # OpenEnv manifest
-├── pyproject.toml           # Package metadata + dependencies
 ├── server/
-│   ├── traffic_environment.py  # Environment subclass (reset/step/state)
-│   ├── app.py                  # FastAPI app via create_app()
-│   ├── Dockerfile              # Multi-stage build from openenv-base
-│   └── requirements.txt        # Server dependencies
+│   ├── app.py               # FastAPI app via create_app()
+│   └── traffic_environment.py  # Environment subclass (reset/step/state)
 ├── baseline/
-│   ├── fixed_time_agent.py     # Fixed-cycle 30s baseline agent
-│   └── run_baseline.py         # Reproducible scoring across all tasks
+│   ├── fixed_time_agent.py  # Fixed-cycle 30s baseline agent
+│   └── run_baseline.py      # Reproducible scoring across all tasks
 └── tests/
     ├── test_network.py
     ├── test_vehicles.py

@@ -7,19 +7,15 @@ except Exception as e:
         "openenv is required. Install with: pip install 'openenv[core]>=0.2.0'"
     ) from e
 
-try:
-    from ..models import TrafficAction, TrafficObservation
-    from .traffic_environment import TrafficEnvironment
-except (ImportError, ModuleNotFoundError):
-    from models import TrafficAction, TrafficObservation
-    from server.traffic_environment import TrafficEnvironment
+from models import TrafficAction, TrafficObservation
+from server.traffic_environment import TrafficEnvironment
 
 
 app = create_app(
     TrafficEnvironment,
     TrafficAction,
     TrafficObservation,
-    env_name="redgrid",
+    env_name="traffic-oracle",
     max_concurrent_envs=1,
 )
 
