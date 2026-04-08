@@ -1,3 +1,14 @@
+---
+title: traffic-oracle
+emoji: 🚦
+colorFrom: green
+colorTo: red
+sdk: docker
+app_port: 8000
+tags:
+  - openenv
+---
+
 # traffic-oracle — Traffic Signal Optimization (OpenEnv)
 
 An **OpenEnv-compatible environment** simulating adaptive traffic signal control on a city road grid. An RL agent controls traffic lights at every intersection to minimize vehicle wait times during peak hours.
