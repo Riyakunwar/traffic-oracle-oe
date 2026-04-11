@@ -109,8 +109,8 @@ class TrafficEnvironment(Environment):
                 self.simulator.total_cumulative_wait,
             )
             obs.metadata = {
-                "grader_score": grader_score,
-                "total_cumulative_wait": self.simulator.total_cumulative_wait,
+                "grader_score": round(grader_score + 0.0, 6),
+                "total_cumulative_wait": round(float(self.simulator.total_cumulative_wait) + 0.0, 2),
                 "total_departed": self.simulator.total_departed,
                 "total_spawned": self.simulator.total_spawned,
             }
@@ -140,7 +140,7 @@ class TrafficEnvironment(Environment):
         switch_penalty = switches / max(1, num_intersections)
 
         reward = -1.0 * wait_penalty + 0.5 * departed_bonus - 0.05 * switch_penalty
-        return reward
+        return reward + 0.0  # normalize -0.0 to 0.0
 
     def _build_observation(self, reward: float, done: bool) -> TrafficObservation:
         """Build a TrafficObservation from current simulator state."""
@@ -189,7 +189,7 @@ class TrafficEnvironment(Environment):
             total_vehicles_active=len(self.simulator.vehicles),
             total_vehicles_departed=self.simulator.total_departed,
             total_vehicles_waiting=total_waiting,
-            total_cumulative_wait=float(self.simulator.total_cumulative_wait),
+            total_cumulative_wait=float(self.simulator.total_cumulative_wait) + 0.0,
             done=done,
             reward=reward,
         )

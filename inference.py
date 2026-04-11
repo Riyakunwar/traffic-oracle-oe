@@ -226,7 +226,7 @@ def run_task(task: str, client: OpenAI) -> None:
         # Determine success from grader score
         metadata = obs.metadata if obs.metadata else {}
         # Keep fallback strictly inside (0, 1) for strict score validators.
-        score = metadata.get("grader_score", 1e-6)
+        score = metadata.get("grader_score", 1e-4)
         success = score > 0.0
 
     except Exception as exc:
