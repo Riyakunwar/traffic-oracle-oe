@@ -6,7 +6,7 @@ from typing import Dict
 
 from tasks import TaskConfig, TASKS
 
-_SCORE_EPSILON = 1e-4
+_SCORE_EPSILON = 0.1
 
 
 # Calibrated bounds per task (total cumulative wait in seconds).
@@ -48,4 +48,4 @@ def compute_score(task_name: str, total_cumulative_wait: float) -> float:
 
     score = (worst - total_cumulative_wait) / (worst - best)
     clamped = max(_SCORE_EPSILON, min(1.0 - _SCORE_EPSILON, score))
-    return round(clamped + 0.0, 6)
+    return round(clamped + 0.0, 1)
