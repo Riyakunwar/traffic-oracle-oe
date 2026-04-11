@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Dict
 
 from tasks import TaskConfig, TASKS
+
+logger = logging.getLogger(__name__)
 
 _SCORE_EPSILON = 0.1
 
@@ -38,14 +41,22 @@ def compute_score(task_name: str, total_cumulative_wait: float) -> float:
     """
     bounds = GRADER_BOUNDS.get(task_name)
     if bounds is None:
+        logger.warning("[GRADER] task=%s — unknown task, returning epsilon=%s", task_name, _SCORE_EPSILON)
         return _SCORE_EPSILON
 
     worst = bounds["worst_wait"]
     best = bounds["best_wait"]
 
     if worst <= best:
-        return 1.0 - _SCORE_EPSILON if total_cumulative_wait <= best else _SCORE_EPSILON
+        result = 1.0 - _SCORE_EPSILON if total_cumulative_wait <= best else _SCORE_EPSILON
+        logger.info("[GRADER] task=%s wait=%.2f worst=%.2f best=%.2f (degenerate bounds) score=%s",
+                     task_name, total_cumulative_wait, worst, best, result)
+        return result
 
-    score = (worst - total_cumulative_wait) / (worst - best)
-    clamped = max(_SCORE_EPSILON, min(1.0 - _SCORE_EPSILON, score))
-    return round(clamped + 0.0, 1)
+    raw_score = (worst - total_cumulative_wait) / (worst - best)
+    clamped = max(_SCORE_EPSILON, min(1.0 - _SCORE_EPSILON, raw_score))
+    final = round(clamped + 0.0, 1)
+
+    logger.info("[GRADER] task=%s wait=%.2f worst=%.2f best=%.2f raw=%.6f clamped=%.6f final=%s",
+                 task_name, total_cumulative_wait, worst, best, raw_score, clamped, final)
+    return final

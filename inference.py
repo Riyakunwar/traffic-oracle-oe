@@ -24,10 +24,13 @@ Usage:
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sys
 import textwrap
 from typing import List, Optional
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 from openai import OpenAI
 

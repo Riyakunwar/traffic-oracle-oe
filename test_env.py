@@ -9,8 +9,11 @@ Usage:
 
 from __future__ import annotations
 
+import logging
 import sys
 from typing import List, Optional
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 from server.traffic_environment import TrafficEnvironment
 from models import TrafficAction
