@@ -102,14 +102,15 @@ class TrafficEnvironment(Environment):
 
         obs = self._build_observation(reward=reward, done=done)
 
-        # On final step, include grader score in metadata
+        # On final step, replace reward with the grader score (strictly in (0, 1))
         if done:
             grader_score = compute_score(
                 self.task_config.name,
                 self.simulator.total_cumulative_wait,
             )
+            obs.reward = round(grader_score + 0.0, 1)
             obs.metadata = {
-                "grader_score": round(grader_score + 0.0, 6),
+                "grader_score": obs.reward,
                 "total_cumulative_wait": round(float(self.simulator.total_cumulative_wait) + 0.0, 2),
                 "total_departed": self.simulator.total_departed,
                 "total_spawned": self.simulator.total_spawned,
