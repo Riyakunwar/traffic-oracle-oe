@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from uuid import uuid4
 
 from openenv.core.env_server.interfaces import Environment
@@ -143,8 +144,9 @@ class TrafficEnvironment(Environment):
         )
         switch_penalty = switches / max(1, num_intersections)
 
-        reward = -1.0 * wait_penalty + 0.5 * departed_bonus - 0.05 * switch_penalty
-        return reward + 0.0  # normalize -0.0 to 0.0
+        raw = -1.0 * wait_penalty + 0.5 * departed_bonus - 0.05 * switch_penalty
+        # Sigmoid maps any real to (0, 1) — guarantees step reward is always in bounds
+        return 1.0 / (1.0 + math.exp(-raw))
 
     def _build_observation(self, reward: float, done: bool) -> TrafficObservation:
         """Build a TrafficObservation from current simulator state."""

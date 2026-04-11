@@ -89,10 +89,10 @@ def log_step(step: int, action: str, reward: float, done: bool, error: Optional[
     )
 
 
-def log_end(success: bool, steps: int, rewards: List[float]) -> None:
+def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
     print(
-        f"[END] success={str(success).lower()} steps={steps} rewards={rewards_str}",
+        f"[END] success={str(success).lower()} steps={steps} score={score:.2f} rewards={rewards_str}",
         flush=True,
     )
 
@@ -228,12 +228,17 @@ def run_task(task: str, client: OpenAI) -> None:
 
         # Determine success from grader score
         metadata = obs.metadata if obs.metadata else {}
-        # Keep fallback strictly inside (0, 1) for strict score validators.
-        score = metadata.get("grader_score", 0.1)
-        success = score > 0.0
+        score = float(metadata.get("grader_score", 0.1))
+        # Explicit safety clamp — validator requires strictly (0, 1)
+        if score <= 0.0:
+            score = 0.01
+        elif score >= 1.0:
+            score = 0.99
+        success = score >= 0.5
 
     except Exception as exc:
         last_error = str(exc)
+        score = 0.01
         log_step(
             step=steps_taken + 1,
             action="error",
@@ -243,7 +248,7 @@ def run_task(task: str, client: OpenAI) -> None:
         )
 
     finally:
-        log_end(success=success, steps=steps_taken, rewards=rewards)
+        log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
 
 
 # ---------------------------------------------------------------------------

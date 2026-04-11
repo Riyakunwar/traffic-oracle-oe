@@ -45,7 +45,7 @@ def run_task(task_name: str, seed: int = 42) -> dict:
 
     elapsed = time.time() - start_time
     # Keep fallback strictly inside (0, 1) for strict score validators.
-    grader_score = obs.metadata.get("grader_score", 1e-6) if obs.metadata else 1e-6
+    grader_score = obs.metadata.get("grader_score", 0.1) if obs.metadata else 0.1
 
     return {
         "task": task_name,
