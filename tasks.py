@@ -39,8 +39,8 @@ class TaskConfig:
 TASKS: Dict[str, TaskConfig] = {
     "easy": TaskConfig(
         name="easy",
-        grid_rows=4,
-        grid_cols=4,
+        grid_rows=2,
+        grid_cols=2,
         road_capacity=25.0,
         road_length=12,
         episode_duration=7200,
@@ -52,8 +52,8 @@ TASKS: Dict[str, TaskConfig] = {
     ),
     "medium": TaskConfig(
         name="medium",
-        grid_rows=7,
-        grid_cols=7,
+        grid_rows=3,
+        grid_cols=3,
         road_capacity=18.0,
         road_length=8,
         episode_duration=7200,
@@ -70,8 +70,8 @@ TASKS: Dict[str, TaskConfig] = {
     ),
     "hard": TaskConfig(
         name="hard",
-        grid_rows=10,
-        grid_cols=10,
+        grid_rows=4,
+        grid_cols=4,
         road_capacity=12.0,
         road_length=6,
         episode_duration=7200,

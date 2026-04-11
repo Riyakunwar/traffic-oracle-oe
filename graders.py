@@ -9,7 +9,8 @@ from tasks import TaskConfig, TASKS
 
 logger = logging.getLogger(__name__)
 
-_SCORE_EPSILON = 0.1
+_SCORE_MIN = 0.1
+_SCORE_MAX = 0.99
 
 
 # Calibrated bounds per task (total cumulative wait in seconds).
@@ -17,46 +18,49 @@ _SCORE_EPSILON = 0.1
 # best_wait: approximate total wait under a greedy heuristic.
 # These are estimated values that will be refined after running calibration.
 GRADER_BOUNDS: Dict[str, Dict[str, float]] = {
-    "easy": {"worst_wait": 45_000.0, "best_wait": 8_000.0},
-    "medium": {"worst_wait": 325_000.0, "best_wait": 105_000.0},
-    "hard": {"worst_wait": 1_650_000.0, "best_wait": 390_000.0},
+    "easy": {"worst_wait": 5_000.0, "best_wait": 1_200.0},
+    "medium": {"worst_wait": 60_000.0, "best_wait": 25_000.0},
+    "hard": {"worst_wait": 300_000.0, "best_wait": 80_000.0},
 }
 
 
 def compute_score(task_name: str, total_cumulative_wait: float) -> float:
-    """Compute a strictly-bounded (0, 1) score for an episode.
+    """Compute a score in [0.1, 0.99] for an episode.
 
-    Score is linearly interpolated between worst and best wait bounds,
-    then clamped to the open interval (_SCORE_EPSILON, 1.0 - _SCORE_EPSILON).
-
-    A score of 1.0 means the agent achieved the best known wait time.
-    A score of 0.0 means the agent performed as badly as random switching.
+    The raw [0, 1] interpolation between worst/best wait bounds is
+    linearly mapped into [_SCORE_MIN, _SCORE_MAX] so the output can
+    never touch 0.0 or 1.0.
 
     Args:
         task_name: "easy", "medium", or "hard".
         total_cumulative_wait: Sum of all vehicle wait-seconds over the episode.
 
     Returns:
-        Score strictly between 0.0 and 1.0.
+        Score in [0.1, 0.99].
     """
     bounds = GRADER_BOUNDS.get(task_name)
     if bounds is None:
-        logger.warning("[GRADER] task=%s — unknown task, returning epsilon=%s", task_name, _SCORE_EPSILON)
-        return _SCORE_EPSILON
+        logger.warning("[GRADER] task=%s — unknown task, returning min=%s", task_name, _SCORE_MIN)
+        return _SCORE_MIN
 
     worst = bounds["worst_wait"]
     best = bounds["best_wait"]
 
     if worst <= best:
-        result = 1.0 - _SCORE_EPSILON if total_cumulative_wait <= best else _SCORE_EPSILON
+        result = _SCORE_MAX if total_cumulative_wait <= best else _SCORE_MIN
         logger.info("[GRADER] task=%s wait=%.2f worst=%.2f best=%.2f (degenerate bounds) score=%s",
                      task_name, total_cumulative_wait, worst, best, result)
         return result
 
-    raw_score = (worst - total_cumulative_wait) / (worst - best)
-    clamped = max(_SCORE_EPSILON, min(1.0 - _SCORE_EPSILON, raw_score))
-    final = round(clamped + 0.0, 1)
+    # raw in [0, 1]: 0 = worst performance, 1 = best performance
+    raw = (worst - total_cumulative_wait) / (worst - best)
+    raw = max(0.0, min(1.0, raw))
 
-    logger.info("[GRADER] task=%s wait=%.2f worst=%.2f best=%.2f raw=%.6f clamped=%.6f final=%s",
-                 task_name, total_cumulative_wait, worst, best, raw_score, clamped, final)
+    # Map [0, 1] -> [_SCORE_MIN, _SCORE_MAX]
+    final = round(_SCORE_MIN + raw * (_SCORE_MAX - _SCORE_MIN), 2)
+    # Safety clamp (guards against float drift after rounding)
+    final = max(_SCORE_MIN, min(_SCORE_MAX, final))
+
+    logger.info("[GRADER] task=%s wait=%.2f worst=%.2f best=%.2f raw=%.6f final=%s",
+                 task_name, total_cumulative_wait, worst, best, raw, final)
     return final

@@ -34,7 +34,8 @@
       "Bash(git rm:*)",
       "Bash(python:*)",
       "Bash(docker build:*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(grep -r \"validate\\\\|check\\\\|constraint\" /c/Users/amite/Documents/gitRepos/rl-openenv-ai --include=\"*.py\" ! -path \"*/.venv/*\")"
     ]
   }
 }

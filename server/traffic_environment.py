@@ -21,9 +21,9 @@ class TrafficEnvironment(Environment):
     road network to minimize total vehicle wait time.
 
     Tasks:
-        - "easy": 4x4 grid, light traffic, 2 vehicle types
-        - "medium": 7x7 grid, moderate traffic, 4 vehicle types
-        - "hard": 10x10 grid, heavy peak-hour traffic with commuter corridors
+        - "easy": 2x2 grid, light traffic, 2 vehicle types
+        - "medium": 3x3 grid, moderate traffic, 4 vehicle types
+        - "hard": 4x4 grid, heavy peak-hour traffic with commuter corridors
     """
 
     SUPPORTS_CONCURRENT_SESSIONS: bool = True
@@ -34,18 +34,21 @@ class TrafficEnvironment(Environment):
         self.simulator: TrafficSimulator | None = None
         self._prev_phases: list[int] = []
 
-    def reset(self, **kwargs) -> TrafficObservation:
+    def reset(self, seed: int | None = None, episode_id: str | None = None, **kwargs) -> TrafficObservation:
         """Reset the environment and start a new episode.
+
+        Args:
+            seed: Random seed for itinerary generation. Default: task's default seed.
+            episode_id: Optional episode identifier. Default: auto-generated UUID.
 
         Keyword Args:
             task: Task difficulty ("easy", "medium", "hard"). Default: "easy".
-            seed: Random seed for itinerary generation. Default: task's default seed.
         """
         task_name = kwargs.get("task", "easy")
-        seed = kwargs.get("seed", None)
 
         self.task_config = TASKS.get(task_name, TASKS["easy"])
         effective_seed = seed if seed is not None else self.task_config.seed
+        effective_episode_id = episode_id if episode_id is not None else str(uuid4())
 
         # Build the road network
         network = RoadNetwork.grid(
@@ -62,7 +65,7 @@ class TrafficEnvironment(Environment):
 
         # Create simulator
         self.simulator = TrafficSimulator(network, itineraries)
-        self._state = State(episode_id=str(uuid4()), step_count=0)
+        self._state = State(episode_id=effective_episode_id, step_count=0)
         self._prev_phases = [0] * self.task_config.num_intersections
 
         return self._build_observation(reward=0.0, done=False)
@@ -108,7 +111,7 @@ class TrafficEnvironment(Environment):
                 self.task_config.name,
                 self.simulator.total_cumulative_wait,
             )
-            obs.reward = round(grader_score + 0.0, 1)
+            obs.reward = grader_score
             obs.metadata = {
                 "grader_score": obs.reward,
                 "total_cumulative_wait": round(float(self.simulator.total_cumulative_wait) + 0.0, 2),

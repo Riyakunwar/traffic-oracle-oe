@@ -35,7 +35,7 @@ traffic-oracle/
 - **Vehicle sizes**: 2-wheeler=0.5, 3-wheeler=0.75, small_car=1.0, large_vehicle=2.0 car-equivalents.
 - **Road capacity**: Measured in car-equivalents. Vehicles can't enter a full road.
 - **Routing**: BFS shortest path, pre-computed at reset for all OD pairs.
-- **Tasks**: easy (4x4), medium (7x7), hard (10x10). Selected via `reset(task="easy")`.
+- **Tasks**: easy (2x2), medium (3x3), hard (4x4). Selected via `reset(task="easy")`.
 - **Grader**: Linear interpolation between worst/best wait bounds, clamped [0,1].
 - **Episode**: 7200 steps = 2 simulated hours.
 

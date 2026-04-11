@@ -16,17 +16,17 @@ class TestTaskConfigs:
         assert "medium" in TASKS
         assert "hard" in TASKS
 
-    def test_easy_is_4x4(self):
-        assert TASKS["easy"].grid_rows == 4
-        assert TASKS["easy"].grid_cols == 4
+    def test_easy_is_2x2(self):
+        assert TASKS["easy"].grid_rows == 2
+        assert TASKS["easy"].grid_cols == 2
 
-    def test_medium_is_7x7(self):
-        assert TASKS["medium"].grid_rows == 7
-        assert TASKS["medium"].grid_cols == 7
+    def test_medium_is_3x3(self):
+        assert TASKS["medium"].grid_rows == 3
+        assert TASKS["medium"].grid_cols == 3
 
-    def test_hard_is_10x10(self):
-        assert TASKS["hard"].grid_rows == 10
-        assert TASKS["hard"].grid_cols == 10
+    def test_hard_is_4x4(self):
+        assert TASKS["hard"].grid_rows == 4
+        assert TASKS["hard"].grid_cols == 4
 
     def test_episode_duration(self):
         for config in TASKS.values():
@@ -64,34 +64,47 @@ class TestItineraryGeneration:
 
 
 class TestGrader:
+    """Grader maps wait times to scores in [0.1, 0.99].
+
+    Easy bounds: worst_wait=5000, best_wait=1200.
+    """
+
     def test_score_at_worst(self):
-        score = compute_score("easy", 50_000.0)
-        assert 0.0 < score < 1.0
-        assert score < 0.01
+        score = compute_score("easy", 5_000.0)
+        assert 0.1 <= score <= 0.99
+        assert score == 0.1
 
     def test_score_at_best(self):
-        score = compute_score("easy", 5_000.0)
-        assert 0.0 < score < 1.0
-        assert score > 0.99
+        score = compute_score("easy", 1_200.0)
+        assert 0.1 <= score <= 0.99
+        assert score == 0.99
 
     def test_score_in_between(self):
-        score = compute_score("easy", 27_500.0)
-        assert 0.4 < score < 0.6
+        # midpoint wait = (5000+1200)/2 = 3100 -> raw 0.5 -> 0.1 + 0.5*0.89 = 0.545
+        score = compute_score("easy", 3_100.0)
+        assert 0.4 < score < 0.7
 
     def test_score_below_best_clamped(self):
         score = compute_score("easy", 0.0)
-        assert 0.0 < score < 1.0
-        assert score > 0.99
+        assert 0.1 <= score <= 0.99
+        assert score == 0.99
 
     def test_score_above_worst_clamped(self):
         score = compute_score("easy", 100_000.0)
-        assert 0.0 < score < 1.0
-        assert score < 0.01
+        assert 0.1 <= score <= 0.99
+        assert score == 0.1
 
     def test_unknown_task(self):
         score = compute_score("nonexistent", 1000.0)
-        assert 0.0 < score < 1.0
-        assert score < 0.01
+        assert 0.1 <= score <= 0.99
+        assert score == 0.1
+
+    def test_all_scores_strictly_in_bounds(self):
+        """No score can ever be 0.0 or 1.0."""
+        for task in ["easy", "medium", "hard"]:
+            for wait in [0, 1, 100, 10_000, 100_000, 1_000_000]:
+                score = compute_score(task, float(wait))
+                assert 0.1 <= score <= 0.99, f"{task} wait={wait} score={score}"
 
 
 class TestSimulationIntegration:
